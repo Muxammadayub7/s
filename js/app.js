@@ -1,87 +1,110 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Elementlarni to'g'ri ID orqali topamiz
-  const modal = document.querySelector('#registrationModal'); 
-  const regForm = document.querySelector('#registrationForm');
-  const phoneInput = document.querySelector('#phone');
-  const closeModalBtn = document.querySelector('#closeModalBtn');
-  
-  const scriptURL = 'https://script.google.com/macros/s/AKfycbxjg-a3rcf39G4sfRjJXAkvA9-zfmBVFBnDcKMGpxqvi37OFf6qnSDigb0-MFoO-OuEjg/exec';
+document.addEventListener("DOMContentLoaded", function () {
+  const e = document.querySelectorAll(".registerBtn"),
+    t = document.getElementById("registrationModal"),
+    n = document.getElementById("closeModalBtn"),
+    o = document.querySelector(".homeModalOverlay"),
+    d = document.getElementById("registrationForm"),
+    l = document.getElementById("name"),
+    a = document.getElementById("nameError"),
+    c = document.getElementById("phone"),
+    i = document.getElementById("phoneError"),
+    r = document.getElementById("submitBtn");
 
-  // 2. Barcha "open" ID li tugmalarni topish va modalni ochish
-  document.querySelectorAll('#open').forEach(btn => {
-    btn.onclick = e => {
-      e.preventDefault();
-      if (modal) {
-        modal.style.display = 'block'; // 'active' klassi o'rniga display ishlatamiz
-        document.body.style.overflow = 'hidden';
-      }
-    };
-  });
+  const E = window.phoneFormatter; // ✅ take it from formatter.js
 
-  // 3. Modalni yopish funksiyasi
-  const closeModal = () => {
-    if (modal) {
-      modal.style.display = 'none';
-      document.body.style.overflow = '';
+  let p = !1,
+    g = 0;
+
+  function f() {
+    t &&
+      ((p = !0),
+      (g = window.scrollY),
+      (t.style.display = "block"),
+      (document.body.style.overflow = "hidden"),
+      (a.style.display = "none"),
+      (i.style.display = "none"));
+  }
+
+  function v() {
+    t &&
+      p &&
+      ((p = !1),
+      (t.style.display = "none"),
+      (document.body.style.overflow = ""),
+      (document.body.style.position = ""),
+      (document.body.style.top = ""),
+      window.scrollTo(0, g));
+  }
+
+  e.forEach((e) => e.addEventListener("click", f));
+  n && n.addEventListener("click", v);
+  o && o.addEventListener("click", v);
+
+  d.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    if (!E) {
+      console.error("phoneFormatter is not initialized. Check formatter.js load order and p/g variables.");
+      i.style.display = "block";
+      return;
     }
-  };
 
-  if (closeModalBtn) closeModalBtn.onclick = closeModal;
+    const t = l.value.trim(),
+      n = c.value.trim();
 
-  // Modal tashqarisiga bosganda yopish
-  window.onclick = e => {
-    if (e.target.classList.contains('homeModalOverlay')) closeModal();
-  };
+    let o = !1;
 
-  // 4. Telefon formatlash (90 123 45 67 ko'rinishida)
-  if (phoneInput) {
-    phoneInput.oninput = e => {
-      let val = e.target.value.replace(/\D/g, '');
-      let res = '';
-      if (val.length > 0) res = val.substring(0, 2);
-      if (val.length > 2) res += ' ' + val.substring(2, 5);
-      if (val.length > 5) res += ' ' + val.substring(5, 7);
-      if (val.length > 7) res += ' ' + val.substring(7, 9);
-      e.target.value = res;
+    if (t) a.style.display = "none";
+    else (a.style.display = "block"), (o = !0);
+
+    if (E.validate(n)) i.style.display = "none";
+    else (i.style.display = "block"), (o = !0);
+
+    if (o) return;
+
+    r.textContent = "YUBORILMOQDA...";
+    r.disabled = !0;
+
+    const now = new Date(),
+      s = now.toLocaleDateString("uz-UZ"),
+      m = now.toLocaleTimeString("uz-UZ");
+
+    const payload = {
+      Ism: t,
+      TelefonRaqam: E.getCurrentCode() + " " + n,
+      SanaSoat: s + " - " + m,
     };
-  }
 
-  // 5. Formani yuborish
-  if (regForm) {
-    regForm.onsubmit = e => {
-      e.preventDefault();
-      const submitBtn = regForm.querySelector('#submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.innerText = 'Yuborilmoqda...';
+    localStorage.setItem("formData", JSON.stringify(payload));
+    window.location.href = "/thankYou.html";
 
-      const formData = new FormData();
-      formData.append('name', document.querySelector('#name').value);
-      formData.append('phone', "+998 " + phoneInput.value);
-
-      fetch(scriptURL, { method: 'POST', body: formData, mode: 'no-cors' })
-        .then(() => {
-          window.location.href = 'thankYou.html';
-        })
-        .catch(() => {
-          // Xatolik bo'lsa ham thankYou sahifasiga o'tish (no-cors tufayli)
-          window.location.href = 'thankYou.html';
-        });
-    };
-  }
+    r.textContent = "DAVOM ETISH";
+    r.disabled = !1;
+    l.value = "";
+    c.value = "";
+    v();
+  });
 });
 
-// Taymer kodi (bu qismi to'g'ri)
-const totalSeconds = 2 * 60 + 59;
-const displayMin = document.querySelector('#minutes');
-const displaySec = document.querySelector('#seconds');
+const timerEl = document.getElementById("timer");
 
-if (displayMin && displaySec) {
-    let timer = totalSeconds;
-    setInterval(() => {
-        let m = parseInt(timer / 60, 10);
-        let s = parseInt(timer % 60, 10);
-        displayMin.textContent = m < 10 ? '0' + m : m;
-        displaySec.textContent = s < 10 ? '0' + s : s;
-        if (--timer < 0) timer = 0;
-    }, 1000);
-}
+// start time in seconds (2 minutes)
+let time = 2 * 60;
+
+const interval = setInterval(() => {
+  const minutes = Math.floor(time / 60);
+  const seconds = time % 60;
+
+  timerEl.textContent = 
+    String(minutes).padStart(2, "0") + ":" + 
+    String(seconds).padStart(2, "0");
+
+  if (time === 0) {
+    clearInterval(interval);
+    // optional: do something when finished
+    // alert("Time's up!");
+    return;
+  }
+
+  time--;
+}, 1000);
